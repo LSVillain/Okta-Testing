@@ -207,7 +207,3 @@ main() {
     echo " Run this to access ArgoCD locally:"
     echo
 }
-
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    main "$@"
-fi
