@@ -24,7 +24,7 @@ function configure_git() {
     function_start
 
     export GITOPS_REPO_USERNAME="LSVillain"
-    export GITOPS_REPO_URL=${GITOPS_REPO_URL:-"https://github.com/$%7BGITOPS_REPO_USERNAME%7D/Okta-Testing.git"%7D
+    export GITOPS_REPO_URL=${GITOPS_REPO_URL}:-"https://github.com/$%7BGITOPS_REPO_USERNAME%7D/Okta-Testing.git"%7D
     export GITHUB_TOKEN_FILE="/home/dave/scripts/gh-token.txt"
 
     if [ ! -f "$GITHUB_TOKEN_FILE" ]; then
@@ -207,3 +207,7 @@ main() {
     echo " Run this to access ArgoCD locally:"
     echo
 }
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi
