@@ -51,4 +51,5 @@ jobs:
       - name: Run the scripts
         run: |
           ./deploy-okta.sh
+      - name: curling mock site
         run: curl -X POST http://localhost:3001/oauth2/token -d "username=admin@demo.com&password=admin123"
