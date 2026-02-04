@@ -37,7 +37,7 @@ jobs:
         run: |
           ./env-setup.sh
 
-    deploy_okta:
+  deploy_okta:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
     defaults:
