@@ -15,9 +15,9 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-  env:
-    SCRIPTS_DIR: ./scripts/
-    CONFIG_DIR: ./config
+  # env:
+  #   SCRIPTS_DIR: ./scripts/
+  #   CONFIG_DIR: ./config
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
