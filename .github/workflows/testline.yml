@@ -34,7 +34,9 @@ jobs:
       - name: Check out the repository to the runner
         uses: actions/checkout@v5
       - name: Make the script files executable
-        run: chmod +x env-setup.sh 
+        run: chmod +x env-setup.sh
+      - name: Set token file
+        run: echo "$GITHUB_TOKEN_FILE" > testing.txt  
       - name: Run the scripts
         run: |
           ./env-setup.sh
