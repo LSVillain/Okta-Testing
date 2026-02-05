@@ -25,7 +25,7 @@ function configure_git() {
 
     export GITOPS_REPO_USERNAME="LSVillain"
     export GITOPS_REPO_URL="https://github.com/$%7BGITOPS_REPO_USERNAME%7D/Okta-Testing.git"
-    # export GITHUB_TOKEN_FILE="/home/dave/scripts/gh-token.txt"
+    export GITHUB_TOKEN_FILE="$GITHUB_TOKEN_FILE"
 
     if [ ! -f "$GITHUB_TOKEN_FILE" ]; then
         echo " GitHub token not found at $GITHUB_TOKEN_FILE"
