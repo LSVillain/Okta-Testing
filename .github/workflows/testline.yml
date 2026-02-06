@@ -15,45 +15,142 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-  # env:
-  #   SCRIPTS_DIR: ./scripts/
-  #   CONFIG_DIR: ./config
+  env:
+    SSH_OPTS: "-o ControlMaster=auto -o ControlPersist=10m -o ControlPath=~/.ssh/control-%r@%h:%p"
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
+  setup-connection:
+    runs-on: ubuntu-latest
+    outputs:
+      connection_ready: ${{ steps.setup.outputs.ready }}
+    
+    steps:
+    - name: Setup persistent SSH connection
+      id: setup
+      run: |
+        # Setup SSH directory
+        mkdir -p ~/.ssh
+        chmod 700 ~/.ssh
+        
+        # Write private key
+        echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        
+        # Add to known_hosts
+        ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+        
+        # Test and establish master connection
+        ssh $SSH_OPTS -f -N ubuntu@"$EC2_HOST"
+        
+        # Verify connection
+        if ssh $SSH_OPTS -O check ubuntu@"$EC2_HOST" 2>/dev/null; then
+          echo "✅ Persistent SSH connection established"
+          echo "ready=true" >> $GITHUB_OUTPUT
+        else
+          echo "❌ Failed to establish connection"
+          echo "ready=false" >> $GITHUB_OUTPUT
+        fi
+  
+  job1:
+    runs-on: ubuntu-latest
+    needs: setup-connection
+    if: needs.setup-connection.outputs.connection_ready == 'true'
+    
+    steps:
+    - uses: actions/checkout@v4
+      
+    - name: Run script via persistent connection
+      run: |
+        # Uses existing connection - much faster
+        ssh $SSH_OPTS ubuntu@"$EC2_HOST" << 'EOF'
+          echo "Job 1: Setting up environment"
+          cd /opt/mock-okta
+          git pull
+        EOF
+  
+  job2:
+    runs-on: ubuntu-latest
+    needs: job1
+    
+    steps:
+    - name: Run another script
+      run: |
+        ssh $SSH_OPTS ubuntu@"$EC2_HOST" << 'EOF'
+          echo "Job 2: Installing dependencies"
+          cd /opt/mock-okta
+          npm install
+        EOF
+  
+  job3:
+    runs-on: ubuntu-latest
+    needs: job2
+    
+    steps:
+    - name: Deploy application
+      run: |
+        ssh $SSH_OPTS ubuntu@"$EC2_HOST" << 'EOF'
+          echo "Job 3: Deploying"
+          cd /opt/mock-okta
+          pm2 restart mock-okta
+        EOF
 
-  setup_env:
-    # The type of runner that the job will run on
+   setup_env:
+    needs: setup_ssh
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN_FILE: ${{ secrets.TESTING_TOKEN }}
-    defaults:
-      run:
-        working-directory: ./scripts
+    
     steps:
-      - name: Check out the repository to the runner
-        uses: actions/checkout@v5
-      - name: Make the script files executable
-        run: chmod +x env-setup.sh
-      - name: Set token file
-        run: echo "$GITHUB_TOKEN_FILE" > testing.txt  
-      - name: Run the scripts
+      - uses: actions/checkout@v5
+      
+      - name: Copy and run setup script on EC2
         run: |
-          ./env-setup.sh
+          # Copy scripts to EC2
+          scp -o ControlPath=~/.ssh/control-%r@%h:%p \
+            ./scripts/* ubuntu@"$EC2_HOST":/tmp/scripts/
+          
+          # Run setup on EC2
+          ssh $SSH_OPTS ubuntu@"$EC2_HOST" << 'EOF'
+            mkdir -p /opt/mock-okta/scripts
+            mv /tmp/scripts/* /opt/mock-okta/scripts/
+            chmod +x /opt/mock-okta/scripts/*.sh
+            
+            # Set token on EC2
+            echo "$GITHUB_TOKEN_FILE" > /opt/mock-okta/testing.txt
+            
+            # Run setup
+            cd /opt/mock-okta/scripts
+            ./env-setup.sh
+          EOF
 
   deploy_okta:
-    # The type of runner that the job will run on
+    needs: setup_env
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./scripts
+    
     steps:
-      - name: Check out the repository to the runner
-        uses: actions/checkout@v5
-      - name: Make the script files executable
-        run: chmod +x deploy-okta.sh 
-      - name: Run the scripts
+      - uses: actions/checkout@v5
+      
+      - name: Deploy to EC2
         run: |
-          ./deploy-okta.sh
-      - name: curling mock site
-        run: curl -X POST http://localhost:3001/oauth2/token -d "username=admin@demo.com&password=admin123"
+          ssh $SSH_OPTS ubuntu@"$EC2_HOST" << 'EOF'
+            cd /opt/mock-okta/scripts
+            ./deploy-okta.sh
+            
+            # Test on EC2
+            echo "Testing locally on EC2:"
+            curl -X POST http://localhost:3001/oauth2/token \
+              -d "username=admin@demo.com&password=admin123" \
+              -H "Content-Type: application/x-www-form-urlencoded"
+          EOF
+          
+  cleanup:
+    runs-on: ubuntu-latest
+    needs: job3
+    if: always()
+    
+    steps:
+    - name: Close SSH connection
+      run: |
+        # Close master connection
+        ssh $SSH_OPTS -O exit ubuntu@"$EC2_HOST" 2>/dev/null || true
+        echo "SSH connection closed"
