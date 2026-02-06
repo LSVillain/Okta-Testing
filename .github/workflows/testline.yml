@@ -15,8 +15,8 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-  env:
-    SSH_OPTS: "-o ControlMaster=auto -o ControlPersist=10m -o ControlPath=~/.ssh/control-%r@%h:%p"
+env:
+  SSH_OPTS: "-o ControlMaster=auto -o ControlPersist=10m -o ControlPath=~/.ssh/control-%r@%h:%p"
 
 jobs:
   setup-connection:
