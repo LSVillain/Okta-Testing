@@ -95,7 +95,7 @@ jobs:
         EOF
 
   setup_env:
-    needs: setup_connection
+    needs: setup-connection
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN_FILE: ${{ secrets.TESTING_TOKEN }}
