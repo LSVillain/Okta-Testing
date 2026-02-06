@@ -26,7 +26,7 @@ jobs:
     
     steps:
     - name: Debug EC2_HOST
-      run: echo "EC2_HOST=$EC2_HOST"
+      run: echo "EC2_HOST=${{ vars.EC2_HOST }}"
     - name: Setup persistent SSH connection
       id: setup
       run: |
@@ -37,7 +37,7 @@ jobs:
         
         
         # Write private key
-        echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        echo "${{ vars.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
         
         # Add to known_hosts
@@ -102,7 +102,7 @@ jobs:
     needs: setup-connection
     runs-on: ubuntu-latest
     env:
-      GITHUB_TOKEN_FILE: ${{ secrets.TESTING_TOKEN }}
+      GITHUB_TOKEN_FILE: ${{ vars.TESTING_TOKEN }}
     
     steps:
       - uses: actions/checkout@v5
