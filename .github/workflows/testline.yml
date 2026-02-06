@@ -25,12 +25,16 @@ jobs:
       connection_ready: ${{ steps.setup.outputs.ready }}
     
     steps:
+    - name: Debug EC2_HOST
+      run: echo "EC2_HOST=$EC2_HOST"
     - name: Setup persistent SSH connection
       id: setup
       run: |
         # Setup SSH directory
         mkdir -p ~/.ssh
         chmod 700 ~/.ssh
+
+        
         
         # Write private key
         echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
